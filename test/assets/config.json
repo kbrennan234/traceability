@@ -6,5 +6,5 @@
 "tideDirs" : ["test/assets/TIDE"],
 "checkSrcLinks" : "True",
 "checkTestLinks" : "True",
-"outputDir" : test/out"
+"outputDir" : "test/out"
 }

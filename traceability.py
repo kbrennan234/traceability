@@ -11,7 +11,7 @@ import enum
 from lxml import etree
 
 from generator import TraceabilityGenerator
-from utils import tRequirementLink, tRequirementValue, tLinkType, tVerificationType
+from utils import tRequirementLink, tRequirementValue, tLinkType
 
 def buildParser():
     ''' Builds command line argument parser'''
@@ -393,32 +393,31 @@ def exportDoorsModules(modules, doorsUsr, doorsPwd, doorsServer, doorsView, door
     
     outputDir = os.path.expanduser(outputDir)
     outputDir = os.path.expandvars(outputDir)
-    doorsDir = os.path.join(outputDir, 'doors')
     
     # make sub-directories for exported DOORS modules
-    if (not os.path.exists(doorsDir)):
-        os.makedirs(doorsDir)
+    if (not os.path.exists(outputDir)):
+        os.makedirs(outputDir)
     
     # update template DXL script for exporting
     cwd = os.path.abspath(os.getcwd())
     exportTemplate = os.path.join(cwd, 'export_template.dxl')
-    exportFile = os.path.join(doorsDir, 'export.dxl')
+    exportFile = os.path.join(outputDir, 'export.dxl')
     
     if (True != os.path.isfile(exportTemplate)):
         logger.error('Export DXL script template does not exist. Expected:\n\t%s' % (exportTemplate))
         return -1
         
-    moduleExport = '['
+    moduleExport = '{'
     for module in modules:
         logger.info('Exporting %s to:\n\t%s' % (module, os.path.join(outputDir, module + '.csv')))
         moduleExport += '\'' + module + '\', '
     
-    moduleExport = moduleExport.rsplit(',', 1)[0] + ']'
+    moduleExport = moduleExport.rsplit(',', 1)[0] + '}'
     
     with open(exportTemplate, 'r') as infile:
         template = Template(infile.read())
         with open(exportFile, 'w') as outfile:
-            outfile.write(template.safe_substitute(modules=moduleExport, output_dir=doorsDir, view=doorsView))
+            outfile.write(template.safe_substitute(modules=moduleExport, output_dir=outputDir, view=doorsView))
             
     # use IBM DOORS to export modules to CSV
     doorsExe = os.path.join(doorsExe, 'DOORS.exe')
@@ -428,8 +427,7 @@ def exportDoorsModules(modules, doorsUsr, doorsPwd, doorsServer, doorsView, door
     
     try:
         # build call to DOORS exe using user, password, and script
-        batch_cmd = "\"#import \\\"%s\\\"\"" % (exportFile)
-        cmd = [doorsExe, "-data", doorsServer, "-u", doorsUsr, "-P", doorsPwd, "-b", batch_cmd]
+        cmd = [doorsExe, "-W", "-data", doorsServer, "-u", doorsUsr, "-P", doorsPwd, "-b", exportFile]
     
         # export modules
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -439,12 +437,14 @@ def exportDoorsModules(modules, doorsUsr, doorsPwd, doorsServer, doorsView, door
         logger.debug(stdout)
         
         # check for any errors in processing command
-        if ((stderr is not None) and ('' != stderr)):
+        if ((stderr is not None) and (b'' != stderr)):
             logger.error('Failed to export modules')
             return -1
     except:
         logger.error('Failed to export modules', exc_info=True)
         return -1
+        
+    return 0
 
 def buildReqMap(modules, outputDir):
     ''' Build a requirement map based on the specified requirement modules'''
@@ -488,7 +488,6 @@ def parseReqCsv(moduleName, moduleFile):
             class tReqCsvColHeader(enum.Enum):
                 COL_HEADER__REQUIREMENT_NAME = 'ID'
                 COL_HEADER__REQUIREMENT_TEXT = 'SW Requirements'
-                COL_HEADER__VERIFICATION_TYPE = 'Verification'
             
             # verify expected column headers in CSV file
             for col in tReqCsvColHeader:
@@ -501,21 +500,10 @@ def parseReqCsv(moduleName, moduleFile):
                 # parse requirement details
                 reqName = row[tReqCsvColHeader.COL_HEADER__REQUIREMENT_NAME.value]
                 reqText = row[tReqCsvColHeader.COL_HEADER__REQUIREMENT_TEXT.value]
-                reqVerificationType = row[tReqCsvColHeader.COL_HEADER__VERIFICATION_TYPE.value]
                 
-                # build requirement value based on requirement text, requirement links, and verification type
-                if ('' == reqVerificationType):
-                    req = tRequirementValue(reqText, [], tVerificationType.VERIFICATION_TYPE__NONE)
-                elif ('test' == reqVerificationType.lower()):
-                    req = tRequirementValue(reqText, [], tVerificationType.VERIFICATION_TYPE__TEST)
-                elif ('demonstrate' == reqVerificationType.lower()):
-                    req = tRequirementValue(reqText, [], tVerificationType.VERIFICATION_TYPE__DEMONSTRATE)
-                elif ('inspection' == reqVerificationType.lower()):
-                    req = tRequirementValue(reqText, [], tVerificationType.VERIFICATION_TYPE__INSPECTION)
-                else:
-                    logger.warn('Unrecognized requirement verification type (%s). Defaulting to NONE' % (reqVerificationType))
-                    req = tRequirementValue(reqText, [], tVerificationType.VERIFICATION_TYPE__NONE)
-            
+                # build requirement value based on requirement text, requirement links
+                req = tRequirementValue(reqText, [])
+                
                 # check if requirement already in module map
                 if (reqName in moduleMap):
                     logger.warn('Duplicate requirement names(%s) found in module(%s)' % (reqName, moduleName))
@@ -894,6 +882,9 @@ if '__main__' == __name__:
     args = parser.parse_args()
     
     # check if configuration file provided for additional arguments
+    if (args.configFile is None):
+        args.configFile = []
+        
     errCode = parseConfigFile(args)
     if (0 != errCode):
         exit(errCode)
@@ -919,16 +910,17 @@ if '__main__' == __name__:
 
     # export DOORS modules to CSV files
     if (True == args.EXPORT):
-        print ('Failed to export DOORS modules. View log for additional details.')
         errCode = exportDoorsModules(
             args.modules, 
             args.doorsUsr, 
             args.doorsPwd, 
+            args.doorsServer,
             args.doorsView, 
             args.doorsExe, 
             args.outputDir)
         
         if (0 != errCode):
+            print ('Failed to export DOORS modules. View log for additional details.')
             exit(errCode)
 
     # build requirements map from CSV files
