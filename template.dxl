@@ -1,0 +1,37 @@
+void exportModuleToCsv(string moduleName, string viewName, string exportPath)
+{
+    // load module without displaying
+    Module m read(moduleName, false)
+    
+    // load view
+    load view viewName
+    
+    // create export filename
+    String filename = exportPath "/" name(m) ".csv"
+    
+    // open file
+    Stream s write(filename)
+    if (!null s)
+    {
+        // write module to stream
+        close(s)
+    }
+}
+
+void exportModulesToCsv(string moduleNames[], string viewName, string exportPath)
+{
+    // export each module in array
+    for (i = 0; i < (sizeof modules); i++)
+    {
+        exportModule(moduleNames[i], viewName, exportPath)
+    }
+}
+
+
+string moduleNames[] = $modules
+string exportPath = $outputDir
+string viewName = $view
+
+exportModulesToCsv(moduleNames, viewName, exportPath)
+
+exit_

@@ -414,10 +414,14 @@ def exportDoorsModules(modules, doorsUsr, doorsPwd, doorsServer, doorsView, door
     
     moduleExport = moduleExport.rsplit(',', 1)[0] + '}'
     
+    moduleExport = moduleExport.replace('\\', '/')
+    view = doorsView.replace('\\', '/')
+    output_dir = outputDir.replace('\\', '/')
+    
     with open(exportTemplate, 'r') as infile:
         template = Template(infile.read())
         with open(exportFile, 'w') as outfile:
-            outfile.write(template.safe_substitute(modules=moduleExport, output_dir=outputDir, view=doorsView))
+            outfile.write(template.safe_substitute(modules=moduleExport, output_dir=outputDir, view=view))
             
     # use IBM DOORS to export modules to CSV
     doorsExe = os.path.join(doorsExe, 'DOORS.exe')
