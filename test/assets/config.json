@@ -1,10 +1,12 @@
 {
 "loggingLevel" : "INFO",
-"modules" : ["ABC SRS"],
+"modules" : ["Requirements A",
+             "Requirements B"],
 "srcDirs" : ["test/assets/Code"],
 "rpyFiles" : [],
 "tideDirs" : ["test/assets/TIDE"],
 "checkSrcLinks" : "True",
 "checkTestLinks" : "True",
-"outputDir" : "test/out"
+"outputDir" : "test/out",
+"basename" : "True"
 }

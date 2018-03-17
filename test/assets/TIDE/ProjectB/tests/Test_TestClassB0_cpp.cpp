@@ -11,7 +11,7 @@ public:
 
 void Test_TestClassB0_cpp::setUp()
 {
-/// \REQUIREMENT_LINK ABC SRS 123
+/// \REQUIREMENT_LINK Req 10B
 }
 
 void Test_TestClassB0_cpp::tearDown()

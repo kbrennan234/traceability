@@ -93,6 +93,10 @@ def buildParser():
         metavar='directory',
         action='store',
         nargs=1)
+    parser.add_argument('-basename',
+        help='Display only basename instead of full file path.',
+        action='store_true',
+        default=False)
         
     # IBM DOORS arguments
     parser.add_argument('-doorsUsr',
@@ -355,19 +359,20 @@ def parseDoxygenXmlReqLinks(doxygenDirectory, reqType, reqMap):
                 refId = referenceNode.get('refid', None)
                 refKind = referenceNode.get('kindref', None)
 
+                # initialize filename and line number
+                filename = None
+                lineNum = None
+
                 if (refId is None):
                     logger.error('Invalid XML format for req.xml, missing refid attribute for ref element in file:\n\t%s' % (reqXml))
                     return -1
                 elif (refKind is None):
                     logger.error('Invalid XML format for req.xml, missing kindref attribute for ref element in file:\n\t%s' % (reqXml))
                     return -1
-                elif ('member' != refKind):
-                    logger.warn('Unsupported kindref attribute type: %s' % (refKind))
-                    listEntryNode = six.next(childIterator, None)
-                    continue
-                
-                # get filename of reference
-                filename, lineNum = getFilename(refId, doxygenDirectory)
+                else:
+                    if ('member' == refKind):
+                        # get filename of reference
+                        filename, lineNum = getFilename(refId, doxygenDirectory)
                 
                 # get listitem paired with listentry
                 listItemNode = six.next(childIterator, None)
@@ -414,14 +419,12 @@ def exportDoorsModules(modules, doorsUsr, doorsPwd, doorsServer, doorsView, door
     
     moduleExport = moduleExport.rsplit(',', 1)[0] + '}'
     
-    moduleExport = moduleExport.replace('\\', '/')
-    view = doorsView.replace('\\', '/')
-    output_dir = outputDir.replace('\\', '/')
-    
     with open(exportTemplate, 'r') as infile:
         template = Template(infile.read())
         with open(exportFile, 'w') as outfile:
-            outfile.write(template.safe_substitute(modules=moduleExport, output_dir=outputDir, view=view))
+            outfile.write(template.safe_substitute(modules=moduleExport.replace('\\', '/'), 
+                                                   output_dir=outputDir.replace('\\', '/'), 
+                                                   view=doorsView.replace('\\', '/')))
             
     # use IBM DOORS to export modules to CSV
     doorsExe = os.path.join(doorsExe, 'DOORS.exe')

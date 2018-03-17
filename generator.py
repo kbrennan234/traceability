@@ -399,7 +399,13 @@ class TraceabilityGenerator:
                     linksText = ''
                     for link in reqValue.reqLinks:
                         if (tLinkType.LINK_TYPE__SRC == link.linkType):
-                            linksText += link.linkName + '\n'
+                            linksText += link.linkName
+                            if ((link.linkFile is not None) and (link.linkFileLineNum is not None)):
+                                if (True == args.basename):
+                                    linksText += ' - (%s line %s)' % (os.path.basename(link.linkFile), link.linkFileLineNum)
+                                else:
+                                    linksText += ' - (%s line %s)' % (link.linkFile, link.linkFileLineNum)
+                            linksText += '\n'
                     
                     cell = moduleSheet.cell(row=cellRow, column=rowCol)
                     cell.value = linksText
