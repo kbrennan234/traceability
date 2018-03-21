@@ -14,7 +14,7 @@
 /** \REQUIREMENT_LINK Req 1A */
 #define CONSTANT_A_2 "A"
 
-REQUIREMENT_LINK Req 1B
+/// \REQUIREMENT_LINK Req 1B
 static const int CONSTANT_B = 0;
 
 /**

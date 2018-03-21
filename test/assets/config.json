@@ -3,7 +3,7 @@
 "modules" : ["Requirements A",
              "Requirements B"],
 "srcDirs" : ["test/assets/Code"],
-"rpyFiles" : [],
+"rpyFiles" : ["test/assets/Model/Project.rpy"],
 "tideDirs" : ["test/assets/TIDE"],
 "checkSrcLinks" : "True",
 "checkTestLinks" : "True",

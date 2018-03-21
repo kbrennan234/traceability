@@ -263,8 +263,80 @@ def parseRhapsodyModelLinks(rpyFile, reqMap):
     rpyFile = os.path.expanduser(rpyFile)
     rpyFile = os.path.expandvars(rpyFile)
     
-    logger.info('Parsing source links in IBM Rhapsody project:' % (rpyFile))
+    logger.info('Parsing source links in IBM Rhapsody project:\n\t%s' % (rpyFile))
+    
+    from RhapsodyParser import RhapsodyParser
+    
+    projectFiles = None
+    
+    try:
+        projectFiles = RhapsodyParser.RhapsodyProjectParser.parse(rpyFile)
+    except:
+        logger.error('Failed to parse rhapsody files in project:\n\t%s' % (srcDir))
+        return -1
+    
+    if (projectFiles is None):
+        logger.error('Failed to parse rhapsody files in project:\n\t%s' % (srcDir))
+        return -1
+    
+    for projectFilename, projectFileTree in six.iteritems(projectFiles):
+        parseRhapsodyModelFileLinks(projectFilename, projectFileTree, reqMap)
+        
     return 0
+
+def parseRhapsodyModelFileLinks(filename, fileTree, reqMap):
+    ''' Parse requirement links in model objects in a IBM Rhapsody Project'''
+    
+    logger = logging.getLogger(__name__)
+    
+    filename = os.path.expanduser(filename)
+    filename = os.path.expandvars(filename)
+    
+    logger.debug('Parsing source links in IBM Rhapsody model file:\n\t%s' % (filename))
+    
+    # find all nodes with dependencies
+    for dependenciesNode in fileTree.iter('Dependencies'):
+        
+        linkedNode = dependenciesNode.getparent()
+        
+        nameNode = linkedNode.find('_name')
+        if (nameNode is None):
+            logger.warn('Failed to find _name attribute for a model element with dependencies in file:\n\t%s' % (filename))
+            continue
+        elif ((nameNode.text is None) or ('' == nameNode.text)):
+            logger.warn('Empty _name attribute in model element with dependencies in file:\n\t%s' % (filename))
+            continue
+        
+        # get full system path
+        sysPath = getRhapsodyElementPath(linkedNode) + '::' + nameNode.text
+        
+        # search for any requirement links
+        dependenciesNode = linkedNode.find('Dependencies')
+        if (dependenciesNode is not None):
+            for valueNode in dependenciesNode.findall('value'):
+                dependsOnNode = valueNode.find('_dependsOn')
+                if (dependsOnNode is not None):
+                    m2ClassNode = dependsOnNode.find('_m2Class')
+                    if (m2ClassNode is not None):
+                        if ('IRequirement' == m2ClassNode.text):
+                            reqNameNode = dependsOnNode.find('_name')
+                            if (reqNameNode is not None):
+                                # add requirement link to requirement map
+                                addReqLink(reqNameNode.text, tRequirementLink(tLinkType.LINK_TYPE__SRC, sysPath, filename, 0), reqMap)
+
+def getRhapsodyElementPath(node):
+    ''' Get rhapsody system path of model element node'''
+    
+    elemPath = ''
+    parentNode = node.getparent()
+    while (parentNode is not None):
+        if ('ISubsystem' == parentNode.get('type', None)):
+            nameNode = parentNode.find('_name')
+            if (nameNode is not None):
+                elemPath = nameNode.text + elemPath
+        parentNode = parentNode.getparent()
+        
+    return elemPath
 
 def parseTideTestLinks(tideDir, outputDir, reqMap):
     ''' Parse requirement links in test code in TIDE projects'''
