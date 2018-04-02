@@ -196,7 +196,7 @@ def parseDoxygenReqLinks(srcDir, outputDir, reqType, reqMap):
         os.makedirs(outputDir)
     
     # update doxyfile template with the specified source directory and output directory
-    cwd = os.path.abspath(os.getcwd())
+    cwd = os.path.dirname(os.path.realpath(__file__))
     doxyTemplateFile = os.path.join(cwd, 'template.doxyfile')
     doxyFile = os.path.join(outputDir, 'project.doxyfile')
     
@@ -476,7 +476,7 @@ def exportDoorsModules(modules, doorsUsr, doorsPwd, doorsServer, doorsView, door
         os.makedirs(outputDir)
     
     # update template DXL script for exporting
-    cwd = os.path.abspath(os.getcwd())
+    cwd = os.path.dirname(os.path.realpath(__file__))
     exportTemplate = os.path.join(cwd, 'export_template.dxl')
     exportFile = os.path.join(outputDir, 'export.dxl')
     
