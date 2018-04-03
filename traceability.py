@@ -55,7 +55,16 @@ def buildParser():
         metavar='LEVEL',
         action='store',
         nargs=1)
-    
+    parser.add_argument('-logFile',
+        help='File path for log file',
+        metavar='FILEPATH',
+        action='store',
+        nargs=1)
+    parser.add_argument('--verbose',
+        help='Print logging output to the console',
+        action='store_true',
+        default=False)
+        
     # input arguments
     parser.add_argument('-modules',
         help='List of requirements module names.',
@@ -760,15 +769,45 @@ def configureLogger(args):
 
     logger = logging.getLogger(__name__)
     
-    # configure logger if specified
-    LOG_FILENAME = os.path.join(args.outputDir, 'log.txt')
-    fh = logging.FileHandler(LOG_FILENAME)
+    fh = None
+    ch = None
+    
+    # set log format
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    fh.setFormatter(formatter)
+      
+    # configure console logger
+    if (True == args.verbose):
+        ch = logging.StreamHandler()
+    
+    # configure log file
+    if (args.logFile is not None):
+        if (type(args.logFile) is list):
+            args.logFile = args.logFile[0]
+            
+        if (True != isinstance(args.logFile, six.string_types)):
+            print ('here')
+            try:
+                args.logFile = args.logFile.decode("utf-8")
+            except:
+                print ('Invalid log file path:\n\t%s' % (args.logFile))
+                return -1
+        
+        if (args.logFile == ''):
+            print ('Invalid empty log file path:\n\t%s' % (args.logFile))
+            return -1
+        
+        args.logFile = os.path.expanduser(args.logFile)
+        args.logFile = os.path.expandvars(args.logFile)
+        fh = logging.FileHandler(args.logFile)
+        
+    # configure logging level
     if (None != args.loggingLevel):
         try:
             logger.setLevel(logging.getLevelName(args.loggingLevel))
-            fh.setLevel(logging.getLevelName(args.loggingLevel))
+            if (fh is not None):
+                fh.setLevel(logging.getLevelName(args.loggingLevel))
+            if (ch is not None):
+                ch.setLevel(logging.getLevelName(args.loggingLevel))
             logger.debug('Setting logging level to %s' % (logger.getEffectiveLevel()))
         except:
             logger.error('Unsupported logging level:\n\t%s' % (args.loggingLevel))
@@ -776,10 +815,18 @@ def configureLogger(args):
     else:
         logger = logging.getLogger(__name__)
         logger.setLevel(logging.INFO)
-        fh.setLevel(logging.INFO)
+        if (fh is not None):
+            fh.setLevel(logging.INFO)
+        if (ch is not None):
+            ch.setLevel(logging.INFO)
         logger.debug('No logging level specified. Defaulting to INFO.')
     
-    logger.addHandler(fh)
+    if (fh is not None):
+        fh.setFormatter(formatter)
+        logger.addHandler(fh)
+    if (ch is not None):
+        ch.setFormatter(formatter)
+        logger.addHandler(ch)
     
     return 0
 
@@ -978,6 +1025,9 @@ if '__main__' == __name__:
     if (0 != errCode):
         exit(errCode)
     
+    if ((args.logFile is not None) and (args.logFile != '')):
+        print ('Logging output to:\n\t%s' % (args.logFile))
+    
     # any log statements before this point will not be written to the log
     logger.info('******************* TRACEABILITY UTILITY *******************')
     logger.info('Generating output to:\n\t%s' % (args.outputDir))
@@ -1035,3 +1085,12 @@ if '__main__' == __name__:
         # generate report of missing requirements
         generateReport(reqMap, args)
     
+    result = None
+    if (args.logFile is not None):
+        result = 'Success. View log file for additional details.'
+    else:
+        result = 'Success'
+        
+    print (result)
+    if (True != args.verbose):
+        logger.info(result)
